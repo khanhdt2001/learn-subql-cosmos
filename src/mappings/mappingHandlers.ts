@@ -1,8 +1,12 @@
-import { TransferEvent, Message,  ClientInfo, ConnectionInfo, ChannelInfo } from "../types";
 import {
-  CosmosEvent,
-  CosmosMessage,
-} from "@subql/types-cosmos";
+  TransferEvent,
+  Message,
+  ClientInfo,
+  ConnectionInfo,
+  ChannelInfo,
+  PacketInfo,
+} from "../types";
+import { CosmosEvent, CosmosMessage } from "@subql/types-cosmos";
 import { MsgSend } from "../types/proto-interfaces/cosmos/bank/v1beta1/tx";
 
 /*
@@ -64,7 +68,7 @@ export async function handleEvent(event: CosmosEvent): Promise<void> {
   await eventRecord.save();
 }
 
-export async function handleClientEvent(event:CosmosEvent) :Promise<void> {
+export async function handleClientEvent(event: CosmosEvent): Promise<void> {
   logger.info(`handleEventUpdateClient`);
 
   const record = ClientInfo.create({
@@ -76,27 +80,27 @@ export async function handleClientEvent(event:CosmosEvent) :Promise<void> {
     header: "default_header",
   });
 
-  for (const attr of event.event.attributes){
+  for (const attr of event.event.attributes) {
     switch (attr.key) {
       case "client_id":
         record.clientId = attr.value.toString();
         break;
       case "consensus_height":
-        const revisionSplit =  attr.value.toString().split('-');
+        const revisionSplit = attr.value.toString().split("-");
         if (revisionSplit.length != 2) {
           logger.error(`Invalid revision height ${attr.value}`);
           break;
         }
         const revisionNumberString = revisionSplit[0];
-        let revisionNumber : number;
+        let revisionNumber: number;
         try {
-           revisionNumber = parseInt(revisionNumberString, 10);
+          revisionNumber = parseInt(revisionNumberString, 10);
         } catch (error) {
           logger.error(`Invalid revision number ${attr.value}`);
           break;
         }
         const revisionHeightString = revisionSplit[1];
-        let revisionHeight : number;
+        let revisionHeight: number;
         try {
           revisionHeight = parseInt(revisionHeightString, 10);
         } catch (error) {
@@ -117,22 +121,21 @@ export async function handleClientEvent(event:CosmosEvent) :Promise<void> {
   record.save();
 }
 
-
-export async function handleConnectionEvent(event:CosmosEvent) :Promise<void> {
+export async function handleConnectionEvent(event: CosmosEvent): Promise<void> {
   logger.info(`handleConnectionEvent`);
 
   const record = ConnectionInfo.create({
     id: `${event.tx.hash}-${event.msg.idx}-${event.idx}`,
     eventType: event.event.type,
     clientId: "default_client_id",
-   connId: "default_conn_id",
-   counterPartyClientId: "default_counter_party_client_id",
-   counterPartyConnId: "default_counter_party_conn_id",
-   counterPartyCommitmentPrefix: "default_counter_party_commitment_prefix",
-  })
+    connId: "default_conn_id",
+    counterPartyClientId: "default_counter_party_client_id",
+    counterPartyConnId: "default_counter_party_conn_id",
+    counterPartyCommitmentPrefix: "default_counter_party_commitment_prefix",
+  });
   for (const attr of event.event.attributes) {
     switch (attr.key) {
-      case   "connection_id":
+      case "connection_id":
         record.connId = attr.value.toString();
         break;
       case "client_id":
@@ -149,7 +152,7 @@ export async function handleConnectionEvent(event:CosmosEvent) :Promise<void> {
   record.save();
 }
 
-export async function handleChannelEvent(event:CosmosEvent) :Promise<void> {
+export async function handleChannelEvent(event: CosmosEvent): Promise<void> {
   logger.info(`handleChannelEvent`);
   const record = ChannelInfo.create({
     id: `${event.tx.hash}-${event.msg.idx}-${event.idx}`,
@@ -182,6 +185,54 @@ export async function handleChannelEvent(event:CosmosEvent) :Promise<void> {
         break;
       case "version":
         record.version = attr.value.toString();
+        break;
+    }
+  }
+  record.save();
+}
+
+export async function handlePacketEvent(event: CosmosEvent): Promise<void> {
+  const record = PacketInfo.create({
+    id: `${event.tx.hash}-${event.msg.idx}-${event.idx}`,
+    eventType: event.event.type,
+    sequence: BigInt(0),
+    sourcePort: "default_source_port",
+    sourceChannel: "default_source_channel",
+    destPort: "default_dest_port",
+    destChannel: "default_dest_channel",
+    channelOrder: "default_channel_order",
+    data: "default_data",
+    timeoutTimestamp: BigInt(0),
+    ack: "default_ack",
+  });
+  for (const attr of event.event.attributes) {
+    switch (attr.key) {
+      case "sequence":
+        record.sequence = BigInt(attr.value.toString());
+        break;
+      case "source_port":
+        record.sourcePort = attr.value.toString();
+        break;
+      case "source_channel":
+        record.sourceChannel = attr.value.toString();
+        break;
+      case "destination_port":
+        record.destPort = attr.value.toString();
+        break;
+      case "destination_channel":
+        record.destChannel = attr.value.toString();
+        break;
+      case "channel_order":
+        record.channelOrder = attr.value.toString();
+        break;
+      case "data":
+        record.data = attr.value.toString();
+        break;
+      case "timeout_timestamp":
+        record.timeoutTimestamp = BigInt(attr.value.toString());
+        break;
+      case "ack":
+        record.ack = attr.value.toString();
         break;
     }
   }
